@@ -29,16 +29,20 @@ void keepPosInRange( float & pos ) {
   if( pos > 3 ) {
     pos = intPart % 3 + pos - intPart;
   } else if( pos < 0 ) {
-    pos = 3 - pos; 
+    pos = 3 + pos;
   }
 }
 
 byte leftLEDPos = 0;
-long knobReading = 0; // 96 = 1 spin
+float knobReading = 0; // 96 = 1 spin
 float leftKnobPos = 0; // [0, 3]
 float leftBrightness = 0; // [0, 1]
-const byte baseBrightness = 40;
-char leftDirection = 0;
+const byte baseBrightness = 50;
+float leftMoving = 0; // if > 0 then knob is moving
+char leftDirection = 0; // if < 0 moving CCW
+bool leftStopped = false;
+float leftSpeed = 0;
+
 
 void setup() {
   pixels.begin(); // This initializes the NeoPixel library.
@@ -46,17 +50,37 @@ void setup() {
 }
 
 void loop() {
-  knobReading = knobLeft.read();
+  knobReading = knobLeft.read() / 4.0; // 1 click on encoder = 4.0 raw read
   if( knobReading != 0 ) {
-    leftDirection = knobReading > 0 ? 1 : -1;
+    leftDirection += knobReading > 0 ? 1 : -1;
+    leftMoving += 0.2;
+  } else {
+    leftMoving -= 0.001;
   }
-  leftBrightness += abs( knobReading ) - leftBrightness / 1000;
-  //pixels.setBrightness( baseBrightness * pow( leftBrightness / 40, 2 ) );
-  pixels.setBrightness( baseBrightness );
-  leftKnobPos += ( min( leftBrightness/10, 1 ) * leftDirection ) * 0.01;
+  leftDirection = constrain( leftDirection, -3, 3 );
+  leftMoving = constrain( leftMoving, -1, 0.4);
+  //Serial.println( leftMoving );
+  if( leftMoving > 0 ) {
+    //leftBrightness += ( baseBrightness - leftBrightness ) * 0.05;
+    leftBrightness = baseBrightness;
+    leftStopped = false;
+    
+  } else {
+    if( !leftStopped ) {
+      leftSpeed = 0.02 * ( leftDirection > 0 ? 1 : -1 );
+      leftStopped = true;
+      leftMoving = -1;
+    }
+    leftKnobPos += leftSpeed;
+    leftBrightness *= 0.995;
+    leftSpeed *= 0.995;
+  }
+  
+  pixels.setBrightness( leftBrightness );
+  leftKnobPos += knobReading;
   keepPosInRange( leftKnobPos );
   setRingPixels( pixels, round( leftKnobPos ) );
   pixels.show();
-  //Serial.println( leftDirection );
+  
   knobLeft.write(0);
 }
