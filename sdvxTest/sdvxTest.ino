@@ -33,47 +33,35 @@ void keepPosInRange( float & pos ) {
   }
 }
 
-byte leftLEDPos = 0;
-float knobReading = 0; // 96 = 1 spin
+float knobReading = 0; // 24 = 1 spin
 float leftKnobPos = 0; // [0, 3]
 float leftBrightness = 0; // [0, 1]
 const byte baseBrightness = 50;
 float leftMoving = 0; // if > 0 then knob is moving
-char leftDirection = 0; // if < 0 moving CCW
 bool leftStopped = false;
-float leftSpeed = 0;
-
 
 void setup() {
   pixels.begin(); // This initializes the NeoPixel library.
-  //Serial.begin(9600);
 }
 
 void loop() {
   knobReading = knobLeft.read() / 4.0; // 1 click on encoder = 4.0 raw read
   if( knobReading != 0 ) {
-    leftDirection += knobReading > 0 ? 1 : -1;
-    leftMoving += 0.2;
+    leftMoving += 0.25;
   } else {
     leftMoving -= 0.001;
   }
-  leftDirection = constrain( leftDirection, -3, 3 );
-  leftMoving = constrain( leftMoving, -1, 0.4);
-  //Serial.println( leftMoving );
+  leftMoving = constrain( leftMoving, -1, 0.5);
   if( leftMoving > 0 ) {
-    //leftBrightness += ( baseBrightness - leftBrightness ) * 0.05;
-    leftBrightness = baseBrightness;
+    leftBrightness += ( baseBrightness - leftBrightness ) * 0.01;
     leftStopped = false;
     
   } else {
     if( !leftStopped ) {
-      leftSpeed = 0.02 * ( leftDirection > 0 ? 1 : -1 );
       leftStopped = true;
       leftMoving = -1;
     }
-    leftKnobPos += leftSpeed;
     leftBrightness *= 0.995;
-    leftSpeed *= 0.995;
   }
   
   pixels.setBrightness( leftBrightness );
